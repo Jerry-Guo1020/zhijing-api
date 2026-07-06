@@ -143,7 +143,7 @@ jobs:
           set_env_value DB_PORT "${MYSQL_PORT_VALUE}"
           set_env_value MYSQL_PORT "${MYSQL_PORT_VALUE}"
 
-          ln -sfn "${SHARED_ENV}" "${RELEASE_DIR}/.env"
+          ln -sfnT "${SHARED_ENV}" "${RELEASE_DIR}/.env"
           cp "${RELEASE_DIR}/sql/create_mysql.sql" "${MYSQL_INIT_SQL}"
 
           cd "${RELEASE_DIR}"
@@ -167,7 +167,7 @@ jobs:
             exit 1
           fi
 
-          ln -sfn "${RELEASE_DIR}" "${CURRENT_DIR}"
+          ln -sfnT "${RELEASE_DIR}" "${CURRENT_DIR}"
           cd "${CURRENT_DIR}"
           pm2 startOrReload ecosystem.config.cjs --env production
           pm2 save
