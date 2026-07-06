@@ -9,7 +9,7 @@ on:
 
 env:
   ARTIFACT_NAME: zhijing-api-release.tar.gz
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
 
 jobs:
   build:
@@ -108,6 +108,20 @@ jobs:
             echo "Created ${SHARED_ENV}; update it with production database/JWT values before serving traffic."
           fi
 
+          set_env_value() {
+            key="$1"
+            value="$2"
+            if grep -q "^${key}=" "${SHARED_ENV}"; then
+              sed -i "s|^${key}=.*|${key}=${value}|" "${SHARED_ENV}"
+            else
+              printf '\n%s=%s\n' "${key}" "${value}" >> "${SHARED_ENV}"
+            fi
+          }
+
+          set_env_value DB_HOST 127.0.0.1
+          set_env_value DB_PORT 3307
+          set_env_value MYSQL_PORT 3307
+
           ln -sfn "${SHARED_ENV}" "${RELEASE_DIR}/.env"
           cp "${RELEASE_DIR}/sql/create_mysql.sql" "${MYSQL_INIT_SQL}"
 
@@ -117,6 +131,7 @@ jobs:
             exit 1
           fi
 
+          docker compose rm -sf mysql || true
           MYSQL_INIT_SQL_PATH="${MYSQL_INIT_SQL}" docker compose up -d mysql
           for i in $(seq 1 30); do
             if docker compose exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null 2>&1; then
