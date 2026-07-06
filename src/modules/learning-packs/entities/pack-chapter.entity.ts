@@ -7,7 +7,7 @@ export class PackChapterEntity extends AbstractEntity {
   @Column({ name: 'pack_id' })
   packId: string;
 
-  @Column({ name: 'parent_id', nullable: true })
+  @Column({ name: 'parent_id', type: 'char', length: 36, nullable: true })
   parentId?: string | null;
 
   @Column({ length: 150 })

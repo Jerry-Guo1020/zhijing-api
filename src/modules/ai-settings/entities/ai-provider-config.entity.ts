@@ -31,7 +31,7 @@ export class AiProviderConfigEntity extends AbstractEntity {
   @Column({ name: 'api_key_mask', length: 40 })
   apiKeyMask: string;
 
-  @Column({ name: 'model_name', length: 120, nullable: true })
+  @Column({ name: 'model_name', type: 'varchar', length: 120, nullable: true })
   modelName?: string | null;
 
   @Column({ name: 'is_enabled', type: 'boolean', default: true })

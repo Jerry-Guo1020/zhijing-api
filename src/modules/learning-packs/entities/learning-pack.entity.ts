@@ -20,7 +20,7 @@ export class LearningPackEntity extends AbstractEntity {
   @Column({ name: 'study_goal', type: 'varchar', length: 255, nullable: true })
   studyGoal?: string | null;
 
-  @Column({ name: 'subject_name', length: 100, nullable: true })
+  @Column({ name: 'subject_name', type: 'varchar', length: 100, nullable: true })
   subjectName?: string | null;
 
   @Column({

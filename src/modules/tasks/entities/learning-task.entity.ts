@@ -18,10 +18,10 @@ export class LearningTaskEntity extends AbstractEntity {
   })
   type: TaskType;
 
-  @Column({ name: 'pack_id', nullable: true })
+  @Column({ name: 'pack_id', type: 'char', length: 36, nullable: true })
   packId?: string | null;
 
-  @Column({ name: 'chapter_id', nullable: true })
+  @Column({ name: 'chapter_id', type: 'char', length: 36, nullable: true })
   chapterId?: string | null;
 
   @Column({ name: 'target_value', type: 'int', default: 1 })

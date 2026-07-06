@@ -8,10 +8,10 @@ export class FocusRecordEntity extends AbstractEntity {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'task_id', nullable: true })
+  @Column({ name: 'task_id', type: 'char', length: 36, nullable: true })
   taskId?: string | null;
 
-  @Column({ name: 'pack_id', nullable: true })
+  @Column({ name: 'pack_id', type: 'char', length: 36, nullable: true })
   packId?: string | null;
 
   @Column({ name: 'planned_minutes', type: 'int', default: 25 })

@@ -21,13 +21,13 @@ export class CommunityPostEntity extends AbstractEntity {
   @Column({ type: 'longtext' })
   content: string;
 
-  @Column({ name: 'pack_id', nullable: true })
+  @Column({ name: 'pack_id', type: 'char', length: 36, nullable: true })
   packId?: string | null;
 
-  @Column({ name: 'wrong_question_id', nullable: true })
+  @Column({ name: 'wrong_question_id', type: 'char', length: 36, nullable: true })
   wrongQuestionId?: string | null;
 
-  @Column({ name: 'qa_record_id', nullable: true })
+  @Column({ name: 'qa_record_id', type: 'char', length: 36, nullable: true })
   qaRecordId?: string | null;
 
   @Column({ name: 'like_count', type: 'int', default: 0 })

@@ -10,13 +10,13 @@ export class WrongQuestionEntity extends AbstractEntity {
   @Column({ name: 'pack_id' })
   packId: string;
 
-  @Column({ name: 'chapter_id', nullable: true })
+  @Column({ name: 'chapter_id', type: 'char', length: 36, nullable: true })
   chapterId?: string | null;
 
   @Column({ name: 'question_id' })
   questionId: string;
 
-  @Column({ name: 'last_session_id', nullable: true })
+  @Column({ name: 'last_session_id', type: 'char', length: 36, nullable: true })
   lastSessionId?: string | null;
 
   @Column({ name: 'wrong_reason', type: 'varchar', length: 255, nullable: true })

@@ -9,7 +9,7 @@ export class PracticeQuestionEntity extends AbstractEntity {
   @Column({ name: 'pack_id' })
   packId: string;
 
-  @Column({ name: 'chapter_id', nullable: true })
+  @Column({ name: 'chapter_id', type: 'char', length: 36, nullable: true })
   chapterId?: string | null;
 
   @Column({

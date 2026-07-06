@@ -17,7 +17,7 @@ export class PackMaterialEntity extends AbstractEntity {
   @Column({ name: 'file_size', type: 'bigint', default: 0 })
   fileSize: string;
 
-  @Column({ name: 'storage_url', length: 255, nullable: true })
+  @Column({ name: 'storage_url', type: 'varchar', length: 255, nullable: true })
   storageUrl?: string | null;
 
   @Column({ name: 'raw_text', type: 'longtext', nullable: true })

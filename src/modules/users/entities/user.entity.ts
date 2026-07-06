@@ -14,16 +14,16 @@ export class UserEntity extends AbstractEntity {
   @Column({ length: 50, unique: true })
   nickname: string;
 
-  @Column({ length: 100, nullable: true, unique: true })
+  @Column({ type: 'varchar', length: 100, nullable: true, unique: true })
   email?: string | null;
 
-  @Column({ length: 20, nullable: true, unique: true })
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
   phone?: string | null;
 
   @Column({ name: 'password_hash', length: 255 })
   passwordHash: string;
 
-  @Column({ name: 'avatar_url', length: 255, nullable: true })
+  @Column({ name: 'avatar_url', type: 'varchar', length: 255, nullable: true })
   avatarUrl?: string | null;
 
   @Column({ type: 'text', nullable: true })

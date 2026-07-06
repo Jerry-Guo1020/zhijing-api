@@ -11,7 +11,7 @@ export class TargetPlanEntity extends AbstractEntity {
   @Column({ name: 'college_name', length: 150 })
   collegeName: string;
 
-  @Column({ name: 'major_name', length: 150, nullable: true })
+  @Column({ name: 'major_name', type: 'varchar', length: 150, nullable: true })
   majorName?: string | null;
 
   @Column({ name: 'target_year', type: 'int', nullable: true })

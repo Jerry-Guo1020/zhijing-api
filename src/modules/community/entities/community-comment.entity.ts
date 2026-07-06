@@ -10,7 +10,7 @@ export class CommunityCommentEntity extends AbstractEntity {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'parent_id', nullable: true })
+  @Column({ name: 'parent_id', type: 'char', length: 36, nullable: true })
   parentId?: string | null;
 
   @Column({ type: 'longtext' })

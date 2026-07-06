@@ -39,7 +39,7 @@ export class UserPreferenceEntity extends AbstractEntity {
   @Column({ name: 'auto_follow_up', type: 'boolean', default: true })
   autoFollowUp: boolean;
 
-  @Column({ name: 'review_reminder_time', length: 10, nullable: true })
+  @Column({ name: 'review_reminder_time', type: 'varchar', length: 10, nullable: true })
   reviewReminderTime?: string | null;
 
   @OneToOne(() => UserEntity, (user) => user.preference)
