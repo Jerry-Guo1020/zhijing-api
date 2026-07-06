@@ -23,19 +23,19 @@ docker compose version
 npm install -g pm2
 
 # 创建部署目录
-mkdir -p /var/www/zhijing-api/shared
+mkdir -p /home/ubuntu/zhijing-api/shared
 ```
 
 首次部署后，workflow 会自动创建：
 
 ```text
-/var/www/zhijing-api/
+/home/ubuntu/zhijing-api/
   current -> releases/<commit-sha>
   releases/
   shared/.env
 ```
 
-请在服务器上编辑 `/var/www/zhijing-api/shared/.env`，填入生产数据库、JWT 等配置。MySQL 容器会读取同一个 `.env`：
+请在服务器上编辑 `/home/ubuntu/zhijing-api/shared/.env`，填入生产数据库、JWT 等配置。MySQL 容器会读取同一个 `.env`：
 
 ```env
 DB_HOST=127.0.0.1
@@ -48,7 +48,7 @@ MYSQL_PORT=3306
 
 `docker-compose.yml` 会创建 `zhijing-mysql` 容器，并把 MySQL 绑定到服务器本机 `127.0.0.1:3306`，不会直接暴露到公网。Compose 项目名和数据卷名已经固定，后续多次发布会复用同一个 MySQL 数据卷。`sql/create_mysql.sql` 只会在 MySQL 数据卷首次初始化时执行。
 
-部署脚本会把初始化 SQL 同步到 `/var/www/zhijing-api/shared/mysql-init/01-create-mysql.sql`，让 MySQL 容器始终挂载稳定路径。
+部署脚本会把初始化 SQL 同步到 `/home/ubuntu/zhijing-api/shared/mysql-init/01-create-mysql.sql`，让 MySQL 容器始终挂载稳定路径。
 
 ## GitHub Secrets
 
@@ -60,7 +60,7 @@ MYSQL_PORT=3306
 | `SERVER_USER` | `root` 或部署用户 | SSH 登录用户 |
 | `SERVER_SSH_KEY` | 私钥内容 | 对应服务器 `~/.ssh/authorized_keys` 的私钥 |
 | `SERVER_PORT` | `22` | 可选，不填默认 `22` |
-| `DEPLOY_PATH` | `/var/www/zhijing-api` | 可选，不填使用该默认路径 |
+部署目录已固定为 `/home/ubuntu/zhijing-api`，不需要配置 `DEPLOY_PATH`。
 
 ## 手动部署
 
@@ -77,7 +77,7 @@ pm2 restart zhijing-api
 MySQL 容器由 Docker Compose 管理：
 
 ```bash
-cd /var/www/zhijing-api/current
+cd /home/ubuntu/zhijing-api/current
 docker compose ps
 docker compose logs mysql
 docker compose up -d mysql

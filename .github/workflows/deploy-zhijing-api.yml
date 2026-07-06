@@ -62,7 +62,7 @@ jobs:
       SSH_PORT: ${{ secrets.SERVER_PORT || '22' }}
       SSH_USER: ${{ secrets.SERVER_USER }}
       SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/var/www/zhijing-api' }}
+      DEPLOY_PATH: /home/ubuntu/zhijing-api
 
     steps:
       - name: Download release package
