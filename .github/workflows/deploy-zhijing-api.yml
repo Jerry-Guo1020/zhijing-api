@@ -1,0 +1,146 @@
+name: Deploy zhijing-api
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  ARTIFACT_NAME: zhijing-api-release.tar.gz
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: Build backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Create release package
+        run: |
+          tar -czf "${ARTIFACT_NAME}" \
+            dist \
+            package.json \
+            package-lock.json \
+            ecosystem.config.cjs \
+            docker-compose.yml \
+            .env.example \
+            sql
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: zhijing-api-release
+          path: ${{ env.ARTIFACT_NAME }}
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy to server
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      SSH_HOST: ${{ secrets.SERVER_HOST || '43.139.91.62' }}
+      SSH_PORT: ${{ secrets.SERVER_PORT || '22' }}
+      SSH_USER: ${{ secrets.SERVER_USER }}
+      SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/var/www/zhijing-api' }}
+
+    steps:
+      - name: Download release package
+        uses: actions/download-artifact@v4
+        with:
+          name: zhijing-api-release
+
+      - name: Configure SSH
+        run: |
+          test -n "${SSH_HOST}" || (echo "Missing SERVER_HOST secret" && exit 1)
+          test -n "${SSH_USER}" || (echo "Missing SERVER_USER secret" && exit 1)
+          test -n "${SSH_KEY}" || (echo "Missing SERVER_SSH_KEY secret" && exit 1)
+          mkdir -p ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/zhijing_deploy_key
+          chmod 600 ~/.ssh/zhijing_deploy_key
+          ssh-keyscan -p "${SSH_PORT}" "${SSH_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Upload release package
+        run: |
+          scp -i ~/.ssh/zhijing_deploy_key -P "${SSH_PORT}" \
+            "${ARTIFACT_NAME}" \
+            "${SSH_USER}@${SSH_HOST}:/tmp/${ARTIFACT_NAME}"
+
+      - name: Activate release
+        run: |
+          ssh -i ~/.ssh/zhijing_deploy_key -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "DEPLOY_PATH='${DEPLOY_PATH}' ARTIFACT_NAME='${ARTIFACT_NAME}' GITHUB_SHA='${GITHUB_SHA}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          RELEASE_DIR="${DEPLOY_PATH}/releases/${GITHUB_SHA}"
+          CURRENT_DIR="${DEPLOY_PATH}/current"
+          SHARED_DIR="${DEPLOY_PATH}/shared"
+          SHARED_ENV="${SHARED_DIR}/.env"
+          MYSQL_INIT_DIR="${SHARED_DIR}/mysql-init"
+          MYSQL_INIT_SQL="${MYSQL_INIT_DIR}/01-create-mysql.sql"
+
+          mkdir -p "${RELEASE_DIR}" "${SHARED_DIR}" "${MYSQL_INIT_DIR}"
+          tar -xzf "/tmp/${ARTIFACT_NAME}" -C "${RELEASE_DIR}"
+          rm -f "/tmp/${ARTIFACT_NAME}"
+
+          if [ ! -f "${SHARED_ENV}" ]; then
+            cp "${RELEASE_DIR}/.env.example" "${SHARED_ENV}"
+            echo "Created ${SHARED_ENV}; update it with production database/JWT values before serving traffic."
+          fi
+
+          ln -sfn "${SHARED_ENV}" "${RELEASE_DIR}/.env"
+          cp "${RELEASE_DIR}/sql/create_mysql.sql" "${MYSQL_INIT_SQL}"
+
+          cd "${RELEASE_DIR}"
+          if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+            echo "Docker Compose is not available on the server. Install Docker Engine with the Compose plugin first."
+            exit 1
+          fi
+
+          MYSQL_INIT_SQL_PATH="${MYSQL_INIT_SQL}" docker compose up -d mysql
+          for i in $(seq 1 30); do
+            if docker compose exec -T mysql sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "MySQL did not become healthy in time."
+              docker compose logs mysql
+              exit 1
+            fi
+            sleep 2
+          done
+
+          npm ci --omit=dev
+
+          if ! command -v pm2 >/dev/null 2>&1; then
+            echo "pm2 is not installed on the server. Run: npm install -g pm2"
+            exit 1
+          fi
+
+          ln -sfn "${RELEASE_DIR}" "${CURRENT_DIR}"
+          cd "${CURRENT_DIR}"
+          pm2 startOrReload ecosystem.config.cjs --env production
+          pm2 save
+
+          find "${DEPLOY_PATH}/releases" -mindepth 1 -maxdepth 1 -type d | sort | head -n -5 | xargs -r rm -rf
+          EOF

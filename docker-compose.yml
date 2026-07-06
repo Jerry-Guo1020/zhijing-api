@@ -1,0 +1,30 @@
+name: zhijing-api
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: zhijing-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
+      MYSQL_DATABASE: ${DB_NAME:-zhijing_db}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - zhijing_mysql_data:/var/lib/mysql
+      - ${MYSQL_INIT_SQL_PATH:-./sql/create_mysql.sql}:/docker-entrypoint-initdb.d/01-create-mysql.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  zhijing_mysql_data:
+    name: zhijing_mysql_data
