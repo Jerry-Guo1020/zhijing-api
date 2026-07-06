@@ -46,7 +46,7 @@ DB_NAME=zhijing_db
 MYSQL_PORT=3307
 ```
 
-`docker-compose.yml` 会创建 `zhijing-mysql` 容器，并把 MySQL 绑定到服务器本机 `127.0.0.1:3307`，不会直接暴露到公网。这里使用 3307 是为了避免和服务器已有的 MySQL 3306 冲突。Compose 项目名和数据卷名已经固定，后续多次发布会复用同一个 MySQL 数据卷。`sql/create_mysql.sql` 只会在 MySQL 数据卷首次初始化时执行。
+`docker-compose.yml` 会创建 `zhijing-mysql` 容器，并把 MySQL 绑定到服务器本机空闲端口，不会直接暴露到公网。部署脚本会从 `3307-3315` 中自动选择空闲端口，并同步写入 `DB_PORT` 和 `MYSQL_PORT`。Compose 项目名和数据卷名已经固定，后续多次发布会复用同一个 MySQL 数据卷。`sql/create_mysql.sql` 只会在 MySQL 数据卷首次初始化时执行。
 
 部署脚本会把初始化 SQL 同步到 `/home/ubuntu/zhijing-api/shared/mysql-init/01-create-mysql.sql`，让 MySQL 容器始终挂载稳定路径。
 每次部署会重建 `zhijing-mysql` 容器，但不会删除 `zhijing_mysql_data` 数据卷。
