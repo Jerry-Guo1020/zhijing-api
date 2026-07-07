@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { TargetPlanStatus } from '../../../common/enums/app.enums';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -34,5 +34,6 @@ export class TargetPlanEntity extends AbstractEntity {
   status: TargetPlanStatus;
 
   @ManyToOne(() => UserEntity, (user) => user.targetPlans)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 }

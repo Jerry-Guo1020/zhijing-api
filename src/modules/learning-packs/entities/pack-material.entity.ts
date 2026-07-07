@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { MaterialParseStatus } from '../../../common/enums/app.enums';
 import { LearningPackEntity } from './learning-pack.entity';
@@ -35,5 +35,6 @@ export class PackMaterialEntity extends AbstractEntity {
   parseErrorMessage?: string | null;
 
   @ManyToOne(() => LearningPackEntity, (pack) => pack.materials)
+  @JoinColumn({ name: 'pack_id' })
   pack: LearningPackEntity;
 }

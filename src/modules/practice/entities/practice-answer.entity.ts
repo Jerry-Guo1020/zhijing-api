@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { PracticeQuestionEntity } from './practice-question.entity';
 import { PracticeSessionEntity } from './practice-session.entity';
@@ -24,8 +24,10 @@ export class PracticeAnswerEntity extends AbstractEntity {
   aiExplanation?: string | null;
 
   @ManyToOne(() => PracticeSessionEntity, (session) => session.answers)
+  @JoinColumn({ name: 'session_id' })
   session: PracticeSessionEntity;
 
   @ManyToOne(() => PracticeQuestionEntity, (question) => question.answers)
+  @JoinColumn({ name: 'question_id' })
   question: PracticeQuestionEntity;
 }

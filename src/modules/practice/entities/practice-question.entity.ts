@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { QuestionDifficulty, QuestionType } from '../../../common/enums/app.enums';
 import { LearningPackEntity } from '../../learning-packs/entities/learning-pack.entity';
@@ -45,6 +45,7 @@ export class PracticeQuestionEntity extends AbstractEntity {
   knowledgePointTags?: string | null;
 
   @ManyToOne(() => LearningPackEntity, (pack) => pack.practiceQuestions)
+  @JoinColumn({ name: 'pack_id' })
   pack: LearningPackEntity;
 
   @OneToMany(() => PracticeAnswerEntity, (answer) => answer.question)

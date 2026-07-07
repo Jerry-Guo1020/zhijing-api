@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { FocusStatus } from '../../../common/enums/app.enums';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -37,5 +37,6 @@ export class FocusRecordEntity extends AbstractEntity {
   note?: string | null;
 
   @ManyToOne(() => UserEntity, (user) => user.focusRecords)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 }

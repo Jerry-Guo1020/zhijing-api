@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { PackStatus } from '../../../common/enums/app.enums';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -37,6 +37,7 @@ export class LearningPackEntity extends AbstractEntity {
   lastStudiedAt?: Date | null;
 
   @ManyToOne(() => UserEntity, (user) => user.learningPacks)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 
   @OneToMany(() => PackMaterialEntity, (material) => material.pack)

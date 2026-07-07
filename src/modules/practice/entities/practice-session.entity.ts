@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { PracticeSessionStatus, PracticeSessionType } from '../../../common/enums/app.enums';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -50,9 +50,11 @@ export class PracticeSessionEntity extends AbstractEntity {
   submittedAt?: Date | null;
 
   @ManyToOne(() => UserEntity)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 
   @ManyToOne(() => LearningPackEntity)
+  @JoinColumn({ name: 'pack_id' })
   pack: LearningPackEntity;
 
   @OneToMany(() => PracticeAnswerEntity, (answer) => answer.session)

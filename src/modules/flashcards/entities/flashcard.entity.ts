@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import {
   FlashcardMasteryLevel,
@@ -54,5 +54,6 @@ export class FlashcardEntity extends AbstractEntity {
   nextReviewAt?: Date | null;
 
   @ManyToOne(() => LearningPackEntity, (pack) => pack.flashcards)
+  @JoinColumn({ name: 'pack_id' })
   pack: LearningPackEntity;
 }

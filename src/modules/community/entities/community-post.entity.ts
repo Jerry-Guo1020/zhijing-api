@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { PostStatus, PostType } from '../../../common/enums/app.enums';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -44,5 +44,6 @@ export class CommunityPostEntity extends AbstractEntity {
   status: PostStatus;
 
   @ManyToOne(() => UserEntity, (user) => user.communityPosts)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 }

@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { TaskStatus, TaskType } from '../../../common/enums/app.enums';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -47,5 +47,6 @@ export class LearningTaskEntity extends AbstractEntity {
   completedAt?: Date | null;
 
   @ManyToOne(() => UserEntity, (user) => user.tasks)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 }

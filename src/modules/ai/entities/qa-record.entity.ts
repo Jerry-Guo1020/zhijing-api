@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { AbstractEntity } from '../../../common/entities/abstract.entity';
 import { LearningPackEntity } from '../../learning-packs/entities/learning-pack.entity';
 import { UserEntity } from '../../users/entities/user.entity';
@@ -27,8 +27,10 @@ export class QaRecordEntity extends AbstractEntity {
   isFavorite: boolean;
 
   @ManyToOne(() => UserEntity)
+  @JoinColumn({ name: 'user_id' })
   user: UserEntity;
 
   @ManyToOne(() => LearningPackEntity, (pack) => pack.qaRecords)
+  @JoinColumn({ name: 'pack_id' })
   pack: LearningPackEntity;
 }
