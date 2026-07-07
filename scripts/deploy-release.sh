@@ -93,4 +93,11 @@ pm2 delete zhijing-api >/dev/null 2>&1 || true
 pm2 start ecosystem.config.cjs --env production
 pm2 save
 
-find "${DEPLOY_PATH}/releases" -mindepth 1 -maxdepth 1 -type d | sort | head -n -5 | xargs -r rm -rf
+ACTIVE_RELEASE="$(readlink -f "${CURRENT_DIR}" || true)"
+find "${DEPLOY_PATH}/releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+  | sort -rn \
+  | awk -v active="${ACTIVE_RELEASE}" '{ sub(/^[^ ]+ /, ""); if ($0 != active) print }' \
+  | tail -n +5 \
+  | while IFS= read -r old_release; do
+      rm -rf -- "${old_release}"
+    done
