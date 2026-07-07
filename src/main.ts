@@ -12,6 +12,10 @@ import { TransformResponseInterceptor } from './common/interceptors/transform-re
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+    credentials: true,
+  });
   app.use(helmet());
   app.use(compression());
   app.setGlobalPrefix(process.env.APP_PREFIX ?? 'api');
