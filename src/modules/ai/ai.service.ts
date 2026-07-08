@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AskQuestionDto } from './dto/ask-question.dto';
@@ -73,7 +77,9 @@ export class AiService {
     ].join('\n');
 
     if (!materials.some((material) => material.rawText?.trim())) {
-      throw new BadRequestException('当前学习包还没有可用于问答的资料，请先上传并解析材料');
+      throw new BadRequestException(
+        '当前学习包还没有可用于问答的资料，请先上传并解析材料',
+      );
     }
 
     const answer = await this.callAi(userId, context, dto.question);
@@ -98,13 +104,9 @@ export class AiService {
 
   private async callAi(userId: string, context: string, question: string) {
     const config = await this.aiSettingsService.getRuntimeConfig(userId);
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await this.requestChatCompletions(config.baseUrl, {
+      apiKey: config.apiKey,
+      body: {
         model: config.modelName || 'gpt-4o-mini',
         temperature: 0.3,
         messages: [
@@ -114,15 +116,19 @@ export class AiService {
             content: `上下文：\n${context}\n\n问题：${question}`,
           },
         ],
-      }),
-      signal: AbortSignal.timeout(45000),
+      },
     });
 
     if (!response.ok) {
-      throw new BadRequestException(`AI 问答调用失败，服务返回 HTTP ${response.status}`);
+      throw new BadRequestException(
+        `AI 问答调用失败，服务返回 HTTP ${response.status}${await this.readErrorDetail(response)}`,
+      );
     }
 
-    const payload = (await response.json()) as {
+    const payload = (await this.readJson(
+      response,
+      'AI 问答返回内容不是有效 JSON',
+    )) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const content = payload.choices?.[0]?.message?.content?.trim();
@@ -130,6 +136,46 @@ export class AiService {
       throw new BadRequestException('AI 问答没有返回内容');
     }
     return content;
+  }
+
+  private async requestChatCompletions(
+    baseUrl: string,
+    options: { apiKey: string; body: Record<string, unknown> },
+  ) {
+    try {
+      return await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${options.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options.body),
+        signal: AbortSignal.timeout(45000),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请求失败';
+      throw new BadRequestException(`AI 问答连接失败：${message}`);
+    }
+  }
+
+  private async readJson(response: Response, fallbackMessage: string) {
+    try {
+      return await response.json();
+    } catch {
+      throw new BadRequestException(fallbackMessage);
+    }
+  }
+
+  private async readErrorDetail(response: Response) {
+    try {
+      const text = await response.text();
+      if (!text.trim()) {
+        return '';
+      }
+      return `，${text.trim().slice(0, 180)}`;
+    } catch {
+      return '';
+    }
   }
 
   async generateQuestions(userId: string, dto: GenerateQuestionsDto) {
@@ -161,7 +207,11 @@ export class AiService {
     return this.questionRepository.save(questions);
   }
 
-  async generateFlashcards(userId: string, packId: string, dto: GenerateFlashcardsDto) {
+  async generateFlashcards(
+    userId: string,
+    packId: string,
+    dto: GenerateFlashcardsDto,
+  ) {
     await this.aiSettingsService.getRuntimeConfig(userId);
 
     const count = dto.count ?? 10;
@@ -193,7 +243,8 @@ export class AiService {
       return null;
     }
 
-    wrongQuestion.aiReview = '错因分析：基础概念理解不牢，建议先复习章节摘要，再进行相似题训练。';
+    wrongQuestion.aiReview =
+      '错因分析：基础概念理解不牢，建议先复习章节摘要，再进行相似题训练。';
     wrongQuestion.wrongReason = wrongQuestion.wrongReason ?? '概念混淆';
 
     return this.wrongQuestionRepository.save(wrongQuestion);

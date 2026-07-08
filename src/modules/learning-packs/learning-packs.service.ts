@@ -75,12 +75,16 @@ export class LearningPacksService {
 
   async findDetail(userId: string, id: string) {
     const pack = await this.findOwnedPack(userId, id);
-    const materials = await this.materialRepository.find({ where: { packId: id } });
+    const materials = await this.materialRepository.find({
+      where: { packId: id },
+    });
     const chapters = await this.chapterRepository.find({
       where: { packId: id },
       order: { chapterOrder: 'ASC', createdAt: 'ASC' },
     });
-    const knowledgePoints = await this.pointRepository.find({ where: { packId: id } });
+    const knowledgePoints = await this.pointRepository.find({
+      where: { packId: id },
+    });
 
     return { pack, materials, chapters, knowledgePoints };
   }
@@ -109,7 +113,9 @@ export class LearningPacksService {
       .join('\n\n---\n\n');
 
     if (!materials.length || !rawText) {
-      throw new BadRequestException('请先上传可解析的文本资料，再生成学习包内容');
+      throw new BadRequestException(
+        '请先上传可解析的文本资料，再生成学习包内容',
+      );
     }
 
     await this.packRepository.update(pack.id, { status: PackStatus.PARSING });
@@ -123,7 +129,9 @@ export class LearningPacksService {
       const chapters = this.normalizeChapters(parsed);
 
       if (chapters.length === 0) {
-        throw new BadRequestException('AI 未能从资料中解析出有效章节，请补充更完整的材料');
+        throw new BadRequestException(
+          'AI 未能从资料中解析出有效章节，请补充更完整的材料',
+        );
       }
 
       await this.chapterRepository.delete({ packId });
@@ -160,7 +168,9 @@ export class LearningPacksService {
         }
       }
 
-      const topLevelPoints = this.normalizeKnowledgePoints(parsed.knowledgePoints);
+      const topLevelPoints = this.normalizeKnowledgePoints(
+        parsed.knowledgePoints,
+      );
       if (topLevelPoints.length) {
         await this.pointRepository.save(
           topLevelPoints.map((point) =>
@@ -210,13 +220,9 @@ export class LearningPacksService {
   ): Promise<ParsedPackPayload> {
     const config = await this.aiSettingsService.getRuntimeConfig(userId);
     const model = config.modelName || 'gpt-4o-mini';
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await this.requestChatCompletions(config.baseUrl, {
+      apiKey: config.apiKey,
+      body: {
         model,
         temperature: 0.2,
         response_format: { type: 'json_object' },
@@ -233,15 +239,19 @@ export class LearningPacksService {
             ].join('\n'),
           },
         ],
-      }),
-      signal: AbortSignal.timeout(45000),
+      },
     });
 
     if (!response.ok) {
-      throw new BadRequestException(`AI 解析调用失败，服务返回 HTTP ${response.status}`);
+      throw new BadRequestException(
+        `AI 解析调用失败，服务返回 HTTP ${response.status}${await this.readErrorDetail(response)}`,
+      );
     }
 
-    const payload = (await response.json()) as {
+    const payload = (await this.readJson(
+      response,
+      'AI 解析返回内容不是有效 JSON',
+    )) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const content = payload.choices?.[0]?.message?.content;
@@ -250,6 +260,46 @@ export class LearningPacksService {
     }
 
     return this.parseJsonPayload(content);
+  }
+
+  private async requestChatCompletions(
+    baseUrl: string,
+    options: { apiKey: string; body: Record<string, unknown> },
+  ) {
+    try {
+      return await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${options.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options.body),
+        signal: AbortSignal.timeout(45000),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请求失败';
+      throw new BadRequestException(`AI 解析连接失败：${message}`);
+    }
+  }
+
+  private async readJson(response: Response, fallbackMessage: string) {
+    try {
+      return await response.json();
+    } catch {
+      throw new BadRequestException(fallbackMessage);
+    }
+  }
+
+  private async readErrorDetail(response: Response) {
+    try {
+      const text = await response.text();
+      if (!text.trim()) {
+        return '';
+      }
+      return `，${text.trim().slice(0, 180)}`;
+    } catch {
+      return '';
+    }
   }
 
   private parseJsonPayload(content: string): ParsedPackPayload {

@@ -35,7 +35,9 @@ export class AiSettingsService {
 
   async hasUsableConfig(userId: string) {
     const config = await this.configRepository.findOne({ where: { userId } });
-    return Boolean(config?.isEnabled && config.apiKeyEncrypted && config.baseUrl);
+    return Boolean(
+      config?.isEnabled && config.apiKeyEncrypted && config.baseUrl,
+    );
   }
 
   async getRuntimeConfig(userId: string) {
@@ -49,7 +51,7 @@ export class AiSettingsService {
       providerType: config.providerType,
       providerName: config.providerName,
       baseUrl: config.baseUrl,
-      apiKey: this.decryptApiKey(config.apiKeyEncrypted),
+      apiKey: this.safeDecryptApiKey(config.apiKeyEncrypted),
       modelName: config.modelName,
     };
   }
@@ -96,7 +98,7 @@ export class AiSettingsService {
     if (dto.testConnection) {
       const result = await this.testResolvedConfig({
         baseUrl: config.baseUrl,
-        apiKey: this.decryptApiKey(config.apiKeyEncrypted),
+        apiKey: this.safeDecryptApiKey(config.apiKeyEncrypted),
         modelName: config.modelName,
       });
       this.applyTestResult(config, result);
@@ -128,7 +130,9 @@ export class AiSettingsService {
     dto: TestAiProviderConfigDto,
   ): ResolvedAiConfig {
     const baseUrl = dto.baseUrl ?? config?.baseUrl;
-    const apiKey = dto.apiKey ?? (config ? this.decryptApiKey(config.apiKeyEncrypted) : undefined);
+    const apiKey =
+      dto.apiKey ??
+      (config ? this.safeDecryptApiKey(config.apiKeyEncrypted) : undefined);
 
     if (!baseUrl || !apiKey) {
       throw new BadRequestException('请先提供 API Key 和接口地址');
@@ -145,14 +149,17 @@ export class AiSettingsService {
     const startedAt = Date.now();
 
     try {
-      const response = await fetch(`${this.normalizeBaseUrl(config.baseUrl)}/models`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${config.apiKey}`,
-          Accept: 'application/json',
+      const response = await fetch(
+        `${this.normalizeBaseUrl(config.baseUrl)}/models`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+            Accept: 'application/json',
+          },
+          signal: AbortSignal.timeout(10000),
         },
-        signal: AbortSignal.timeout(10000),
-      });
+      );
 
       const latencyMs = Date.now() - startedAt;
 
@@ -259,6 +266,19 @@ export class AiSettingsService {
       decipher.update(Buffer.from(encryptedText, 'base64')),
       decipher.final(),
     ]).toString('utf8');
+  }
+
+  private safeDecryptApiKey(encryptedValue: string) {
+    try {
+      return this.decryptApiKey(encryptedValue);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'AI API Key 解密失败，请重新保存 AI 接入配置',
+      );
+    }
   }
 
   private getEncryptionKey() {
