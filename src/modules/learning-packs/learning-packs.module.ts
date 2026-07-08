@@ -6,9 +6,11 @@ import { LearningPackEntity } from './entities/learning-pack.entity';
 import { PackMaterialEntity } from './entities/pack-material.entity';
 import { PackChapterEntity } from './entities/pack-chapter.entity';
 import { PackKnowledgePointEntity } from './entities/pack-knowledge-point.entity';
+import { AiSettingsModule } from '../ai-settings/ai-settings.module';
 
 @Module({
   imports: [
+    AiSettingsModule,
     TypeOrmModule.forFeature([
       LearningPackEntity,
       PackMaterialEntity,

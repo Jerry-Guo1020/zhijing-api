@@ -25,17 +25,21 @@ export class LearningPacksController {
   }
 
   @Get(':id')
-  findDetail(@Param('id') id: string) {
-    return this.learningPacksService.findDetail(id);
+  findDetail(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string) {
+    return this.learningPacksService.findDetail(user.sub, id);
   }
 
   @Post(':id/materials')
-  addMaterial(@Param('id') id: string, @Body() dto: AddPackMaterialDto) {
-    return this.learningPacksService.addMaterial(id, dto);
+  addMaterial(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() dto: AddPackMaterialDto,
+  ) {
+    return this.learningPacksService.addMaterial(user.sub, id, dto);
   }
 
   @Post(':id/parse')
-  parse(@Param('id') id: string) {
-    return this.learningPacksService.mockParse(id);
+  parse(@CurrentUser() user: CurrentUserPayload, @Param('id') id: string) {
+    return this.learningPacksService.parseWithAi(user.sub, id);
   }
 }

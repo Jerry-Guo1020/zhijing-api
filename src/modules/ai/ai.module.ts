@@ -7,6 +7,9 @@ import { PracticeQuestionEntity } from '../practice/entities/practice-question.e
 import { FlashcardEntity } from '../flashcards/entities/flashcard.entity';
 import { WrongQuestionEntity } from '../wrong-book/entities/wrong-question.entity';
 import { AiSettingsModule } from '../ai-settings/ai-settings.module';
+import { LearningPackEntity } from '../learning-packs/entities/learning-pack.entity';
+import { PackMaterialEntity } from '../learning-packs/entities/pack-material.entity';
+import { PackChapterEntity } from '../learning-packs/entities/pack-chapter.entity';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { AiSettingsModule } from '../ai-settings/ai-settings.module';
       PracticeQuestionEntity,
       FlashcardEntity,
       WrongQuestionEntity,
+      LearningPackEntity,
+      PackMaterialEntity,
+      PackChapterEntity,
     ]),
   ],
   controllers: [AiController],

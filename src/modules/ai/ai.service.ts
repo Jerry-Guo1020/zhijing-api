@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AskQuestionDto } from './dto/ask-question.dto';
@@ -15,6 +15,15 @@ import {
 } from '../../common/enums/app.enums';
 import { WrongQuestionEntity } from '../wrong-book/entities/wrong-question.entity';
 import { AiSettingsService } from '../ai-settings/ai-settings.service';
+import { LearningPackEntity } from '../learning-packs/entities/learning-pack.entity';
+import { PackMaterialEntity } from '../learning-packs/entities/pack-material.entity';
+import { PackChapterEntity } from '../learning-packs/entities/pack-chapter.entity';
+
+const AI_QA_SYSTEM_PROMPT = [
+  '你是知径学习平台的 AI 学习助手。',
+  '请优先依据用户学习包中的资料片段回答；资料不足时要明确说明，不要编造来源。',
+  '回答应结合学习建议，语言清晰，适合学生复习使用。',
+].join('\n');
 
 @Injectable()
 export class AiService {
@@ -27,13 +36,47 @@ export class AiService {
     private readonly flashcardRepository: Repository<FlashcardEntity>,
     @InjectRepository(WrongQuestionEntity)
     private readonly wrongQuestionRepository: Repository<WrongQuestionEntity>,
+    @InjectRepository(LearningPackEntity)
+    private readonly packRepository: Repository<LearningPackEntity>,
+    @InjectRepository(PackMaterialEntity)
+    private readonly materialRepository: Repository<PackMaterialEntity>,
+    @InjectRepository(PackChapterEntity)
+    private readonly chapterRepository: Repository<PackChapterEntity>,
     private readonly aiSettingsService: AiSettingsService,
   ) {}
 
   async ask(userId: string, dto: AskQuestionDto) {
-    await this.aiSettingsService.getRuntimeConfig(userId);
+    const pack = await this.packRepository.findOne({
+      where: { id: dto.packId, userId },
+    });
+    if (!pack) {
+      throw new NotFoundException('学习包不存在');
+    }
 
-    const answer = `这是基于学习包 ${dto.packId} 的示例回答：${dto.question}。后续可接入真实大模型与 RAG 检索。`;
+    const [materials, chapters] = await Promise.all([
+      this.materialRepository.find({ where: { packId: dto.packId } }),
+      this.chapterRepository.find({
+        where: { packId: dto.packId },
+        order: { chapterOrder: 'ASC' },
+      }),
+    ]);
+    const context = [
+      `学习包：${pack.title}`,
+      `科目：${pack.subjectName ?? '未指定'}`,
+      `目标：${pack.studyGoal ?? '未指定'}`,
+      `章节：${chapters.map((chapter) => chapter.title).join('；') || '暂无章节'}`,
+      '资料片段：',
+      materials
+        .map((material) => `${material.fileName}\n${material.rawText ?? ''}`)
+        .join('\n\n---\n\n')
+        .slice(0, 12000),
+    ].join('\n');
+
+    if (!materials.some((material) => material.rawText?.trim())) {
+      throw new BadRequestException('当前学习包还没有可用于问答的资料，请先上传并解析材料');
+    }
+
+    const answer = await this.callAi(userId, context, dto.question);
 
     const record = this.qaRepository.create({
       userId,
@@ -43,14 +86,50 @@ export class AiService {
       answer,
       sourceReferences: JSON.stringify([
         {
-          fileName: 'demo-material.pdf',
-          chapterTitle: '第一章 基础概念',
-          excerpt: '这里是资料来源片段示例。',
+          fileName: materials[0]?.fileName ?? '学习包资料',
+          chapterTitle: chapters[0]?.title ?? null,
+          excerpt: materials[0]?.rawText?.slice(0, 180) ?? '',
         },
       ]),
     });
 
     return this.qaRepository.save(record);
+  }
+
+  private async callAi(userId: string, context: string, question: string) {
+    const config = await this.aiSettingsService.getRuntimeConfig(userId);
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.modelName || 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: AI_QA_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: `上下文：\n${context}\n\n问题：${question}`,
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(45000),
+    });
+
+    if (!response.ok) {
+      throw new BadRequestException(`AI 问答调用失败，服务返回 HTTP ${response.status}`);
+    }
+
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = payload.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      throw new BadRequestException('AI 问答没有返回内容');
+    }
+    return content;
   }
 
   async generateQuestions(userId: string, dto: GenerateQuestionsDto) {

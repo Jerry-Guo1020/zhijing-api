@@ -17,8 +17,11 @@ export class TargetPlansController {
   }
 
   @Get('colleges/search')
-  searchColleges(@Query('q') keyword = '') {
-    return this.targetPlansService.searchColleges(keyword);
+  searchColleges(
+    @Query('q') keyword = '',
+    @Query('level') level: 'undergraduate' | 'graduate' = 'undergraduate',
+  ) {
+    return this.targetPlansService.searchColleges(keyword, level);
   }
 
   @Post()
